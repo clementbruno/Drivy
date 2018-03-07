@@ -74,7 +74,7 @@ class Rental
     end
 
     def get_total_commission(total_price)
-		total_commission = (total_price * 0.3).to_i
+        total_commission = (total_price * 0.3).to_i
     end
 
     def deductible_calc()
@@ -104,26 +104,23 @@ class Rental
     def get_drivy_amount(cars_array)
       commission_calc(get_price(cars_array))[:drivy_fee] + deductible_calc()
     end
-end
 
-def cost_structure(rental, cars_array)
-    {
-        driver: rental.get_driver_amount(cars_array),
-        owner: rental.get_owner_amount(cars_array),
-        insurance: rental.get_insurance_amount(cars_array),
-        assistance: rental.get_assistance_amount(cars_array),
-        drivy: rental.get_drivy_amount(cars_array)
-    }
+    def cost_structure(cars_array)
+        {
+            driver: get_driver_amount(cars_array),
+            owner: get_owner_amount(cars_array),
+            insurance: get_insurance_amount(cars_array),
+            assistance: get_assistance_amount(cars_array),
+            drivy: get_drivy_amount(cars_array)
+        }
+    end
 end
 
 def level_six(file)
     f = File.read(file)
     data = JSON.parse(f)
 
-    #in the previous levels we instantiated rentals here directly but this time:
-    #we want to merge rentals and modifications data first before instantiating the rentals that we are going to compare 
-    #--> cf .each loop on modifications 
-
+    rentals = data["rentals"].map { |rental| Rental.new(rental) }
     #Define array with all cars instances
     cars = data["cars"].map { |car| Car.new(car) }
     #Define array with all modifications
@@ -135,15 +132,15 @@ def level_six(file)
     }
 
     modifications.each do |modification|
-        #get initial rental not instance format in order to merge modification
-        rental = data["rentals"].find { |rental| rental['id'] == modification['rental_id'] }
-        modified_rental = rental.merge(modification)
-        #make rental and modified_rental instances of class Rental
-        rental = Rental.new(rental)
+        rental_data = data["rentals"].find { |rental| rental['id'] == modification['rental_id'] }
+        modified_rental = rental_data.merge(modification)
+        #retrieve rental from rentals arrays
+        rental = rentals.find { |rental| rental.id == modification['rental_id'] }
+        #Make modified_rental an instance of Rental class
         modified_rental = Rental.new(modified_rental) 
 
-        initial_cost = cost_structure(rental, cars)
-        modified_cost = cost_structure(modified_rental, cars)
+        initial_cost = rental.cost_structure(cars)
+        modified_cost = modified_rental.cost_structure(cars)
         driver_diff = modified_cost[:driver] - initial_cost[:driver]
         owner_diff = modified_cost[:owner] - initial_cost[:owner]
         insurance_diff = modified_cost[:insurance] - initial_cost[:insurance]
